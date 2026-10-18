@@ -1,5 +1,9 @@
 # Mandelbrot Explorer Map
 
+[![app-ci](https://github.com/osawa-koki/mandelbrot-explorer-map/actions/workflows/app-ci.yml/badge.svg)](https://github.com/osawa-koki/mandelbrot-explorer-map/actions/workflows/app-ci.yml)
+[![pages](https://github.com/osawa-koki/mandelbrot-explorer-map/actions/workflows/pages.yml/badge.svg)](https://github.com/osawa-koki/mandelbrot-explorer-map/actions/workflows/pages.yml)
+[![Dependabot Updates](https://github.com/osawa-koki/mandelbrot-explorer-map/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/osawa-koki/mandelbrot-explorer-map/actions/workflows/dependabot/dependabot-updates)
+
 🧭🧭🧭 RustとWebAssemblyで作ったマンデルブロ集合の地図アプリ！  
 
 ![成果物](./fruit.gif)  
