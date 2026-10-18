@@ -1,0 +1,20 @@
+{
+  "name": "mandelbrot-explorer-map",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build:wasm": "node scripts/build-wasm.mjs",
+    "dev": "npm run build:wasm && vite --port 3000",
+    "build": "npm run build:wasm && tsc --noEmit && vite build",
+    "preview": "vite preview --port 3000",
+    "typecheck": "npm run build:wasm && tsc --noEmit",
+    "test": "npm run build:wasm && vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5"
+  }
+}
