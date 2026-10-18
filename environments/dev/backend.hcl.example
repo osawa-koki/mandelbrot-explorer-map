@@ -1,0 +1,11 @@
+# Terraform S3 Backend Configuration
+# Copy this file to backend.hcl and fill in your values
+# Usage: terraform init -backend-config=backend.hcl
+
+bucket         = "your-terraform-state-bucket"
+key            = "mandelbrot-explorer-map/terraform.dev.tfstate"
+region         = "ap-northeast-1"
+encrypt        = true
+
+# State locking uses S3 native locking (use_lockfile = true in providers.tf).
+# dynamodb_table is deprecated and not needed.

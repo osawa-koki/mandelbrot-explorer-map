@@ -1,0 +1,163 @@
+name: ci
+
+on: [ pull_request ]
+
+permissions:
+  contents: read
+
+# 同じ PR で新しく push されたら、古い実行は止める
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  TF_IN_AUTOMATION: "true"
+
+jobs:
+  terraform-fmt:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+      - name: Read Terraform version
+        id: terraform_version
+        run: echo "version=$(cat .terraform-version)" >> "$GITHUB_OUTPUT"
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ steps.terraform_version.outputs.version }}
+          terraform_wrapper: false
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+  terraform-validate:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: [ dev, stg, prod ]
+    defaults:
+      run:
+        working-directory: ./environments/${{ matrix.environment }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+      - name: Read Terraform version
+        id: terraform_version
+        run: echo "version=$(cat ../../.terraform-version)" >> "$GITHUB_OUTPUT"
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ steps.terraform_version.outputs.version }}
+          terraform_wrapper: false
+      - name: Setup Terraform plugin cache
+        run: |
+          echo "TF_PLUGIN_CACHE_DIR=$HOME/.terraform.d/plugin-cache" >> "$GITHUB_ENV"
+          mkdir -p "$HOME/.terraform.d/plugin-cache"
+      - name: Cache Terraform plugins
+        uses: actions/cache@v6
+        with:
+          path: ~/.terraform.d/plugin-cache
+          key: terraform-plugins-${{ runner.os }}-${{ hashFiles('environments/*/.terraform.lock.hcl') }}
+      - name: Terraform Init
+        run: terraform init -backend=false -input=false
+      - name: Terraform Validate
+        run: terraform validate -no-color
+  terraform-plan:
+    runs-on: ubuntu-22.04
+    needs: [ terraform-fmt, terraform-validate ]
+    # Dependabot の PR にはシークレットが渡らないので plan しない
+    if: github.event.pull_request.user.login != 'dependabot[bot]'
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: [ dev, stg, prod ]
+    environment:
+      name: ${{ matrix.environment }}
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+    defaults:
+      run:
+        working-directory: ./environments/${{ matrix.environment }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          # Ref: https://github.com/osawa-koki/oidc-integration-github-aws
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Read Terraform version
+        id: terraform_version
+        run: echo "version=$(cat ../../.terraform-version)" >> "$GITHUB_OUTPUT"
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ steps.terraform_version.outputs.version }}
+          terraform_wrapper: false
+      - name: Setup Terraform plugin cache
+        run: |
+          echo "TF_PLUGIN_CACHE_DIR=$HOME/.terraform.d/plugin-cache" >> "$GITHUB_ENV"
+          mkdir -p "$HOME/.terraform.d/plugin-cache"
+      - name: Cache Terraform plugins
+        uses: actions/cache@v6
+        with:
+          path: ~/.terraform.d/plugin-cache
+          key: terraform-plugins-${{ runner.os }}-${{ hashFiles('environments/*/.terraform.lock.hcl') }}
+      - name: Create secret files
+        env:
+          BACKEND_HCL: ${{ secrets.BACKEND_HCL }}
+          TF_VARS: ${{ secrets.TF_VARS }}
+        run: |
+          printf '%s\n' "$BACKEND_HCL" > backend.hcl
+          printf '%s\n' "$TF_VARS" > terraform.tfvars
+      - name: Terraform Init
+        run: terraform init -backend-config=backend.hcl -input=false
+      - name: Terraform Plan
+        id: terraform_plan
+        # 失敗しても PR にコメントしてから、最後のステップでジョブを失敗させる
+        run: |
+          set +e
+          terraform plan -no-color -input=false -lock=false > "$RUNNER_TEMP/plan_output.txt" 2>&1
+          echo "exitcode=$?" >> "$GITHUB_OUTPUT"
+          cat "$RUNNER_TEMP/plan_output.txt"
+      - name: Post Terraform Plan comment to PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ENVIRONMENT: ${{ matrix.environment }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          EXIT_CODE: ${{ steps.terraform_plan.outputs.exitcode }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        # 環境ごとに 1 つのコメントを作り、2 回目以降はそれを更新する
+        run: |
+          MARKER="<!-- terraform-plan:${ENVIRONMENT} -->"
+          if [ "$EXIT_CODE" = "0" ]; then STATUS="✅"; else STATUS="❌"; fi
+          # コメントの上限（65,536 文字）を超えないように切り詰める
+          PLAN_OUTPUT=$(head -c 60000 "$RUNNER_TEMP/plan_output.txt")
+          if [ "$(wc -c < "$RUNNER_TEMP/plan_output.txt")" -gt 60000 ]; then
+            PLAN_OUTPUT="${PLAN_OUTPUT}
+          ...（長いため省略。全文はワークフローのログを参照）"
+          fi
+          {
+            echo "$MARKER"
+            echo "## Terraform Plan (${ENVIRONMENT}) ${STATUS}"
+            echo '```terraform'
+            echo "$PLAN_OUTPUT"
+            echo '```'
+            echo "<sub>Posted by GitHub Actions ([log](${RUN_URL}))</sub>"
+          } > "$RUNNER_TEMP/comment.md"
+          export MARKER
+          COMMENT_ID=$(gh api --paginate "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" \
+            --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith(env.MARKER))) | .id' | head -n 1)
+          if [ -n "$COMMENT_ID" ]; then
+            gh api -X PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/${COMMENT_ID}" -F body=@"$RUNNER_TEMP/comment.md" > /dev/null
+          else
+            gh pr comment "$PR_NUMBER" --body-file "$RUNNER_TEMP/comment.md"
+          fi
+      - name: Fail if Terraform Plan failed
+        if: steps.terraform_plan.outputs.exitcode != '0'
+        run: |
+          echo "::error::Terraform Plan failed (${{ matrix.environment }})"
+          exit 1
