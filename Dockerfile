@@ -8,7 +8,7 @@ COPY wasm/ ./
 RUN cargo build --release --target wasm32-unknown-unknown
 
 # ---- フロントエンドのビルド ----
-FROM node:24-slim AS web-builder
+FROM node:26-slim AS web-builder
 WORKDIR /app/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
