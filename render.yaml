@@ -1,0 +1,11 @@
+# Render の Blueprint。ダッシュボードでこのリポジトリを接続すると、main への push ごとにデプロイされる
+services:
+  - type: web
+    name: mandelbrot-explorer-map
+    runtime: docker
+    plan: free
+    branch: main
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /healthz
+    autoDeployTrigger: commit
