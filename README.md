@@ -19,6 +19,7 @@
 |---|---|---|
 | `wasm/` | タイル 1 枚（256 × 256 ピクセル）の計算と色付け | Rust → WebAssembly（`wasm32-unknown-unknown`） |
 | `frontend/` | Canvas のタイルマップ、操作、設定 | TypeScript / Vite |
+| `Dockerfile`・`nginx/` | ビルドした静的ファイルを nginx で配信するイメージ（Render 用） | Docker / nginx |
 
 ### 計算の流れ
 
@@ -66,3 +67,35 @@ npm run dev     # http://localhost:3000
 | `aa` | アンチエイリアス（`1` で有効） |
 
 例：`?re=-0.743643887037158&im=0.131825904205311&z=30&scheme=fire&iter=auto&aa=0`
+
+## デプロイ
+
+ビルドした静的ファイル（`frontend/dist`）だけを配信する。次の 2 か所にデプロイする。
+
+### GitHub Pages
+
+`main` への push で、`.github/workflows/pages.yml` がビルドしてデプロイする（手動実行もできる）。Vite の `base` を相対パス（`./`）にしているので、サブパス（`https://<ユーザー>.github.io/mandelbrot-explorer-map/`）でも動く。
+
+初回だけ、リポジトリの Settings → Pages の Source を「GitHub Actions」にする。
+
+### Render（Docker）
+
+`render.yaml`（Blueprint）で設定している。Render のダッシュボードで New → Blueprint からこのリポジトリを接続すると、`main` への push ごとにデプロイされる。
+
+`Dockerfile` はマルチステージビルドで、Rust（WebAssembly）→ Node.js（Vite）→ nginx の順にビルドする。nginx は環境変数 `PORT`（Render が渡す。既定は 8080）で待ち受ける。
+
+| パス | 内容 |
+|---|---|
+| `/healthz` | ヘルスチェック（`ok` を返す） |
+| `/assets/*` | `Cache-Control: public, max-age=31536000, immutable`（ファイル名にハッシュが付く） |
+| それ以外 | `Cache-Control: no-cache` |
+
+すべての応答に CSP（WebAssembly のため `'wasm-unsafe-eval'` を許可）などのセキュリティヘッダーを付け、gzip で圧縮する。
+
+ローカルで確認する：
+
+```bash
+docker build -t mandelbrot-explorer-map .
+docker run --rm -e PORT=8080 -p 8080:8080 mandelbrot-explorer-map
+./scripts/check-server.sh http://localhost:8080   # 応答とヘッダーを確認する
+```

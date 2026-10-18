@@ -4,6 +4,7 @@
 
 - `wasm/`：タイルを計算する Rust のクレート（`cdylib` で WebAssembly に、`rlib` でネイティブのテストに使う）
 - `frontend/`：TypeScript / Vite の画面。`npm run build:wasm` が `wasm/` をビルドして `frontend/src/generated/mandelbrot.wasm`（git 管理しない）にコピーする
+- `Dockerfile`・`nginx/`・`render.yaml`：Render 用。ビルドした静的ファイルを nginx で配信するイメージ
 - Rust のバージョンは `wasm/rust-toolchain.toml`、Node.js のバージョンは `frontend/.node-version` で固定している
 
 ## 開発フロー
@@ -62,13 +63,25 @@ npm run build
 
 | ワークフロー | トリガー | 内容 |
 |---|---|---|
-| `app-ci.yml` | すべての PR | Rust の fmt・clippy・test と、フロントエンドの型チェック・テスト・ビルド |
+| `app-ci.yml` | すべての PR | Rust の fmt・clippy・test と、フロントエンドの型チェック・テスト・ビルド。Docker イメージをビルドし、コンテナを起動して `scripts/check-server.sh` で応答を確認する |
+
+### デプロイ
+
+| 先 | トリガー | 内容 |
+|---|---|---|
+| GitHub Pages | `main` への push（`pages.yml`、手動実行も可） | ビルドした `frontend/dist` を GitHub Pages にデプロイする |
+| Render | `main` への push（Render 側の自動デプロイ） | `render.yaml` の設定で Docker イメージをビルドし、nginx で配信する |
+
+- マージ後は、GitHub Pages のデプロイ結果を確認する（`gh run list --workflow pages.yml --branch main --limit 1` → `gh run watch <run-id> --exit-status`）。
+- Vite の `base` は相対パス（`./`）にしている。GitHub Pages はサブパス（`/mandelbrot-explorer-map/`）、nginx はルートで配信するので、絶対パス（`/assets/...` など）を書かない。
+- nginx の `add_header` は、location に書くと server の分が引き継がれない。セキュリティヘッダーは `nginx/security-headers.conf` を各 location で include する。
+- CSP を変えたら、ブラウザでページを開き、コンソールに違反が出ないことを確かめる（WebAssembly には `'wasm-unsafe-eval'`、Worker には `worker-src 'self'`、ファビコンの差し替えには `img-src data:` が要る）。
 
 - ワークフローを変えたら actionlint で確認する（`docker run --rm -v "$PWD:/repo:ro" -w /repo rhysd/actionlint:1.7.7 -no-color`）。
 
 ## 設計上の約束ごと
 
-- **サーバーサイドを持たない**：計算はすべてブラウザ（WebAssembly + Web Worker）で行う。配信するのは静的ファイルだけ。
+- **サーバーサイドを持たない**：計算はすべてブラウザ（WebAssembly + Web Worker）で行う。配信するのは静的ファイルだけ（GitHub Pages と、Render 上の nginx）。
 - **Rust と TypeScript で合わせる値**：
   - カラースキームの並び順（`wasm/src/palette.rs` の `SCHEMES` と `frontend/src/settings.ts` の `COLOR_SCHEMES`）。番号で渡すので、追加するときは両方の末尾に足す。
   - タイルの一辺（`wasm/src/lib.rs` の `TILE_SIZE` と `frontend/src/viewport.ts` の `TILE_SIZE`）。

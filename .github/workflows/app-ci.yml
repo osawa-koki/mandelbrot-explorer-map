@@ -67,3 +67,31 @@ jobs:
           name: dist
           path: frontend/dist
           retention-days: 7
+  docker:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v4
+      - name: Build image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          load: true
+          tags: mandelbrot-explorer-map:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      # Render と同じく PORT を渡して起動し、配信の中身とヘッダーを確かめる
+      - name: Run container
+        run: |
+          docker run -d --name app -e PORT=10000 -p 10000:10000 mandelbrot-explorer-map:ci
+          for _ in $(seq 1 30); do
+            curl -fsS http://localhost:10000/healthz && break
+            sleep 1
+          done
+      - name: Check responses
+        run: ./scripts/check-server.sh http://localhost:10000
+      - name: Show container logs
+        if: always()
+        run: docker logs app

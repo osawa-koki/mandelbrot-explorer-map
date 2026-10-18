@@ -1,0 +1,7 @@
+.git
+.github
+**/node_modules
+**/dist
+wasm/target
+frontend/src/generated
+*.md
