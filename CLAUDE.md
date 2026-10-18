@@ -78,6 +78,7 @@ npm run build
 - CSP を変えたら、ブラウザでページを開き、コンソールに違反が出ないことを確かめる（WebAssembly には `'wasm-unsafe-eval'`、Worker には `worker-src 'self'`、ファビコンの差し替えには `img-src data:` が要る）。
 
 - ワークフローを変えたら actionlint で確認する（`docker run --rm -v "$PWD:/repo:ro" -w /repo rhysd/actionlint:1.7.7 -no-color`）。
+- Dependabot（`.github/dependabot.yml`）は github-actions・npm（`frontend/`）・cargo（`wasm/`）・docker（`Dockerfile`）を毎日更新する。マージは 1 件ずつ行い、`main` への反映（GitHub Pages のデプロイ）の成功を確かめてから次に進む。Rust のツールチェーン（`wasm/rust-toolchain.toml`）と Node.js（`frontend/.node-version`）は Dependabot の対象外なので、上げるときは `Dockerfile` のベースイメージ（`rust:<版>-slim`・`node:<版>-slim`）もそろえる。
 
 ## 設計上の約束ごと
 
