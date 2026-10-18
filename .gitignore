@@ -1,0 +1,37 @@
+### macOS ###
+.DS_Store
+
+### Node ###
+node_modules/
+dist/
+*.log
+*.tsbuildinfo
+coverage/
+
+### Rust ###
+/wasm/target/
+
+### WebAssembly（npm run build:wasm で生成する） ###
+/frontend/src/generated/
+
+### Terraform ###
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfvars
+*.tfvars.json
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+backend.hcl
+tfplan
+
+### VisualStudioCode ###
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
