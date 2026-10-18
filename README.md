@@ -2,6 +2,8 @@
 
 🧭🧭🧭 RustとWebAssemblyで作ったマンデルブロ集合の地図アプリ！  
 
+![成果物](./fruit.gif)  
+
 [osawa-koki/mandelbrot-map](https://github.com/osawa-koki/mandelbrot-map) をもとに、サーバーサイドを持たずブラウザだけで完結する形に作り直したもの。計算は Rust で書いて WebAssembly にコンパイルし、Web Worker で並列に実行する。
 
 ## 機能

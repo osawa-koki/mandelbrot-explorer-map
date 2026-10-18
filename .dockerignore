@@ -5,3 +5,5 @@
 wasm/target
 frontend/src/generated
 *.md
+fruit.gif
+*.mov
