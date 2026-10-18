@@ -44,7 +44,7 @@ WebAssembly のモジュールは wasm-bindgen を使わず、`extern "C"` の�
 
 ## 開発環境
 
-**前提条件**：Rust（`wasm/rust-toolchain.toml` のバージョンを rustup が自動で入れる）、Node.js 24 以上
+**前提条件**：Rust（`wasm/rust-toolchain.toml` のバージョンを rustup が自動で入れる）、Node.js 26 以上
 
 ```bash
 cd ./frontend/
