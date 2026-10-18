@@ -1,6 +1,9 @@
 ### macOS ###
 .DS_Store
 
+### デモ動画（GIF に変換したものだけを管理する） ###
+*.mov
+
 ### Node ###
 node_modules/
 dist/
