@@ -1,0 +1,206 @@
+:root {
+  --panel-bg: rgba(12, 12, 16, 0.78);
+  --panel-border: rgba(255, 255, 255, 0.18);
+  --text: #f2f2f2;
+  --text-dim: rgba(255, 255, 255, 0.65);
+  --accent: #6cb6ff;
+  color-scheme: dark;
+  font-family: system-ui, -apple-system, "Segoe UI", "Hiragino Sans", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  color: var(--text);
+  overscroll-behavior: none;
+}
+
+canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: grab;
+  touch-action: none;
+}
+
+canvas.grabbing {
+  cursor: grabbing;
+}
+
+.panel {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  width: min(260px, calc(100vw - 24px));
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  backdrop-filter: blur(8px);
+  font-size: 13px;
+  z-index: 10;
+}
+
+.panel summary {
+  padding: 10px 14px;
+  cursor: pointer;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  user-select: none;
+}
+
+.panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 14px 14px;
+}
+
+.panel label {
+  color: var(--text-dim);
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.panel label.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.panel select,
+.panel button,
+.zoom-buttons button {
+  font: inherit;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+.panel select option {
+  background: #16161c;
+}
+
+.panel button,
+.zoom-buttons button {
+  cursor: pointer;
+}
+
+.panel button:hover,
+.zoom-buttons button:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.panel :focus-visible,
+.zoom-buttons :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.help {
+  margin-top: 8px;
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+kbd {
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  padding: 0 4px;
+  border: 1px solid var(--panel-border);
+  border-radius: 3px;
+}
+
+.zoom-buttons {
+  position: fixed;
+  right: max(12px, env(safe-area-inset-right));
+  bottom: max(12px, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 10;
+}
+
+.zoom-buttons button {
+  width: 40px;
+  height: 40px;
+  font-size: 20px;
+  line-height: 1;
+  background: var(--panel-bg);
+  backdrop-filter: blur(8px);
+}
+
+.hud {
+  position: fixed;
+  left: max(12px, env(safe-area-inset-left));
+  bottom: max(12px, env(safe-area-inset-bottom));
+  max-width: calc(100vw - 80px);
+  padding: 8px 10px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-dim);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.hud > div {
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  top: 16px;
+  transform: translate(-50%, -8px);
+  padding: 8px 14px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  font-size: 13px;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
+  z-index: 20;
+}
+
+.toast.visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+@media (max-width: 600px) {
+  .hud #hudCursor {
+    display: none;
+  }
+}
